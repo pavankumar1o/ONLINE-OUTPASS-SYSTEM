@@ -1,24 +1,95 @@
-# Compiled class file
-*.class
 
-# Log file
-*.log
 
-# BlueJ files
-*.ctxt
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
+import javax.persistence.*;
+import java.util.List;
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+@SpringBootApplication
+public class OnlineOutpassApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OnlineOutpassApplication.class, args);
+    }
+}
 
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
+@Entity
+class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String username;
+    private String password;
+    private String role; // STUDENT or ADMIN
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+    // Getters and Setters
+}
+
+@Entity
+class OutpassRequest {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String studentName;
+    private String reason;
+    private String status; // PENDING, APPROVED, REJECTED
+
+    // Getters and Setters
+}
+
+interface UserRepository extends JpaRepository<User, Long> {
+    User findByUsername(String username);
+}
+
+interface OutpassRepository extends JpaRepository<OutpassRequest, Long> {}
+
+@RestController
+@RequestMapping("/api")
+class OutpassController {
+    @Autowired
+    private OutpassService outpassService;
+
+    @PostMapping("/request")
+    public OutpassRequest createRequest(@RequestBody OutpassRequest request) {
+        return outpassService.submitRequest(request);
+    }
+
+    @GetMapping("/requests")
+    public List<OutpassRequest> getAllRequests() {
+        return outpassService.getAllRequests();
+    }
+
+    @PutMapping("/approve/{id}")
+    public OutpassRequest approveRequest(@PathVariable Long id) {
+        return outpassService.updateRequestStatus(id, "APPROVED");
+    }
+
+    @PutMapping("/reject/{id}")
+    public OutpassRequest rejectRequest(@PathVariable Long id) {
+        return outpassService.updateRequestStatus(id, "REJECTED");
+    }
+}
+
+@Service
+class OutpassService {
+    @Autowired
+    private OutpassRepository outpassRepository;
+
+    public OutpassRequest submitRequest(OutpassRequest request) {
+        request.setStatus("PENDING");
+        return outpassRepository.save(request);
+    }
+
+    public List<OutpassRequest> getAllRequests() {
+        return outpassRepository.findAll();
+    }
+
+    public OutpassRequest updateRequestStatus(Long id, String status) {
+        OutpassRequest request = outpassRepository.findById(id).orElseThrow();
+        request.setStatus(status);
+        return outpassRepository.save(request);
+    }
+}
